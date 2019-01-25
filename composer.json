@@ -1,0 +1,20 @@
+{
+    "name": "dwzzzl/aho-auth",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Dewa Andhika Putra",
+            "email": "dewaandhika18@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "firebase/php-jwt": "^5.0",
+        "chriskacerguis/codeigniter-restserver": "^3.0",
+        "google/recaptcha": "^1.2"
+    },
+    "config": {
+        "vendor-dir": "application/vendor"
+    }
+}

@@ -1,0 +1,11 @@
+/application/vendor/
+/application/*.json
+/application/config/development/
+/application/sessions/
+/application/logs/
+/application/cache/
+/assets/
+*.tmp
+*.log
+*.sublime-project
+*.sublime-workspace
