@@ -2,7 +2,7 @@
 
 Authentication API using CodeIgniter 3 in **Aho** way. Please make sure you're **Aho** enough to use this.
 
-<p style="text-align:center">
+<p align="center">
   <img src="https://raw.githubusercontent.com/dwzzzl/aho-auth/master/yoshiko.gif">
 </p>
 
@@ -33,7 +33,7 @@ Soon!
 If you're **Aho** enough, you can contribute to this project by sending a Pull Request.
 
 ## TODO Lists
-~~- [x] アホ~~
+- [x] ~~アホ~~
 - [x] Authentication
 - [ ] User Access Control
 - [ ] Documentation
