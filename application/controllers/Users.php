@@ -3,27 +3,29 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Users extends MY_Controller {
 
-    private $tables = array();
-
     private $identity_column;
 
     private $sensitive_data = [
-        'user_password',
-        'user_activation_code',
-        'user_forgot_password_code'
+        'password',
+        'activation_code',
+        'forgot_password_code'
     ];
 
     public function __construct()
     {
         parent::__construct();
 
-        $this->tables = $this->config->item('tables', 'smartc_auth_config');
-        $this->identity_column = $this->config->item('identity_column', 'smartc_auth_config');
-
-        //$this->_check_session();
+        $this->load->model('aho_auth_model', 'aho_auth');
+        $this->identity_column = $this->aho_auth->identity_column;
+        $this->_check_token();
     }
 
     public function index_get($identity = NULL)
+    {
+        return $this->response(['ani' => 'budi']);
+    }
+
+    /*public function index_get($identity = NULL)
     {
         $_response = '';
         $fields = $this->get('fields', TRUE);
@@ -90,7 +92,7 @@ class Users extends MY_Controller {
         $this->set_response($_response, $_response['code']);
     }
 
-    public function index_post()
+    /*public function index_post()
     {
         $identity = $this->post($this->identity_column, TRUE);
         $password = $this->post('password');
@@ -199,5 +201,5 @@ class Users extends MY_Controller {
         }
 
         return $valid_fields;
-    }
+    }*/
 }

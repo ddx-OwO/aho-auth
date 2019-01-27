@@ -1,6 +1,8 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+use Firebase\JWT\JWT;
+
 class MY_Controller extends REST_Controller {
 
     const DEFAULT_LIMIT = 50;
@@ -9,15 +11,55 @@ class MY_Controller extends REST_Controller {
     {
         parent::__construct($config = 'rest');
 
-        header('Access-Control-Allow-Credentials: true');
+        // header('Access-Control-Allow-Credentials: true');
     }
 
     public function index_get()
     {
         $_response = prep_response([
-            'type' => 'bad_request',
-            'message' => 'Bad request'
-        ], REST_Controller::HTTP_BAD_REQUEST, TRUE);
+            'type' => 'unknown_method',
+            'message' => 'Unknown method'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED, TRUE);
+
+        $this->response($_response, $_response['code']);
+    }
+
+    public function index_post()
+    {
+        $_response = prep_response([
+            'type' => 'unknown_method',
+            'message' => 'Unknown method'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED, TRUE);
+
+        $this->response($_response, $_response['code']);
+    }
+
+    public function index_put()
+    {
+        $_response = prep_response([
+            'type' => 'unknown_method',
+            'message' => 'Unknown method'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED, TRUE);
+
+        $this->response($_response, $_response['code']);
+    }
+
+    public function index_delete()
+    {
+        $_response = prep_response([
+            'type' => 'unknown_method',
+            'message' => 'Unknown method'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED, TRUE);
+
+        $this->response($_response, $_response['code']);
+    }
+
+    public function index_patch()
+    {
+        $_response = prep_response([
+            'type' => 'unknown_method',
+            'message' => 'Unknown method'
+        ], REST_Controller::HTTP_METHOD_NOT_ALLOWED, TRUE);
 
         $this->response($_response, $_response['code']);
     }
@@ -49,19 +91,58 @@ class MY_Controller extends REST_Controller {
     /**
      * @return void
      */
-    protected function _check_session()
+    protected function _prepare_jwt_auth()
     {
-        if ($this->smartc_auth->is_logged_in() === FALSE)
+        // If whitelist is enabled it has the first chance to kick them out
+        if ($this->config->item('rest_ip_whitelist_enabled'))
         {
-            $res = $this->set_http_code(REST_Controller::HTTP_UNAUTHORIZED)
-                        ->prepare_error_response('unauthorized', 'Invalid Login');
+            $this->_check_whitelist_auth();
+        }
 
-            REST_Controller::response($res, $res['code']);
+        $this->config->load('aho_config', TRUE);
+
+        $http_auth = $this->input->server('HTTP_AUTHENTICATION') ?: $this->input->server('HTTP_AUTHORIZATION');
+        $jwt_key = $this->config->item('jwt_key', 'aho_config');
+        $jwt_algo = $this->config->item('jwt_algo', 'aho_config');
+        list($jwt) = sscanf($this->input->server('HTTP_AUTHORIZATION'), 'Bearer %s');
+
+        if ($jwt)
+        {
+            $this->load->model('aho_auth_model', 'aho_auth');
+            $verify = $this->aho_auth->login_verify($jwt);
+            if ($verify === FALSE)
+            {
+                $_response = prep_response([
+                    'type' => 'unauthorized',
+                    'message' => $this->aho_auth->message_string()
+                ], REST_Controller::HTTP_UNAUTHORIZED, TRUE);
+
+                $this->response($_response, $_response['code']);
+            }
+        }
+        else
+        {
+            $_response = prep_response([
+                'type' => 'bad_request',
+                'message' => 'Bad request'
+            ], REST_Controller::HTTP_BAD_REQUEST, TRUE);
+
+            $this->response($_response, $_response['code']);
         }
     }
 
-    protected function _check_authority($level)
+    protected function _check_token()
     {
-        
+        $this->load->model('aho_auth_model', 'aho_auth');
+        $verify = $this->aho_auth->login_verify(get_cookie('token', TRUE));
+
+        if ($verify === FALSE)
+        {
+            $_response = prep_response([
+                'type' => 'unauthorized',
+                'message' => $this->aho_auth->message_string()
+            ], REST_Controller::HTTP_UNAUTHORIZED, TRUE);
+            $this->response($_response, $_response['code']);
+        }
     }
 }

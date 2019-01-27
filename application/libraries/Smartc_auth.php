@@ -1677,7 +1677,7 @@ class Smartc_auth
         return $this->db->delete($this->tables['login_attempts']);
     }
 
-        /**
+    /**
      * Set message delimeter
      *
      * Set message delimeters for output

@@ -33,8 +33,8 @@ class Welcome extends CI_Controller {
         $token = array(
             "iss" => "http://example.org",
             "aud" => "http://example.com",
-            "iat" => 1356999524, // Issued at
-            "nbf" => 1357000000
+            "iat" => time(), // Issued at
+            "exp" => time() + 160
         );
 
         /**

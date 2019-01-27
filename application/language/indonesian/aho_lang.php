@@ -86,6 +86,7 @@ $lang['account_error_banned'] = 'Akun anda telah di <strong>banned</strong>. Hub
 $lang['account_error_unregistered'] = 'Akun tidak terdaftar';
 $lang['account_error_unactivated'] = 'Akun anda belum aktif. Silakan periksa email anda atau hubungi Administrator.';
 $lang['account_error_lockout'] = 'Akun anda terkunci.';
+$lang['account_error_token_expired'] = 'Sesi login sudah habis';
 
 $lang['email_activation_subject'] = 'Email aktivasi';
 $lang['email_forgot_password_subject'] = 'Atur ulang kata sandi';

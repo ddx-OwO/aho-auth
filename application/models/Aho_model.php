@@ -173,7 +173,7 @@ class Aho_model extends CI_Model {
         $this->config->load('aho_config', TRUE);
 
         // Get the language
-        $language = $this->config->item('auth_language', 'aho_config');
+        $language = $this->config->item('aho_lang', 'aho_config');
         if ($language === NULL)
         {
             $language = 'indonesian';
@@ -606,5 +606,82 @@ class Aho_model extends CI_Model {
 
         $this->db->trans_commit();
         return TRUE;
+    }
+
+    /**
+     * Set message delimeter
+     *
+     * Set message delimeters for output
+     *
+     * @param   string  $start  Start delimeter
+     * @param   string  $end    End delimeter
+     * @return  void
+     */
+    public function set_message_delimeter($start, $end)
+    {
+        $this->message_start_delimeter = $start;
+        $this->message_end_delimeter = $end;
+    }
+
+    /**
+     * Set message from smartc_auth_lang array or set your own message for output
+     *
+     * @param array|string $message Message line
+     * @return  void
+     */
+
+    public function set_message($message)
+    {
+        if(is_array($message))
+        {
+            foreach($message as $value)
+            {
+                $this->messages[] = $value;
+            }
+        }
+        else
+        {
+            $this->messages[] = $message;
+        }
+    }
+
+    /**
+     * Get messages
+     *
+     * @return string
+     */
+
+    public function message_string()
+    {
+        $messages = '';
+
+        foreach ($this->messages as $m)
+        {
+            $m_lang = $this->lang->line($m) ? $this->lang->line($m) : $m;
+            $messages .= $this->message_start_delimeter . $m_lang . $this->message_end_delimeter . $this->message_new_line;
+        }
+        return $messages;
+    }
+
+    public function message_array()
+    {
+        $messages = array();
+
+        foreach ($this->messages as $m)
+        {
+            $m_lang = $this->lang->line($m) ? $this->lang->line($m) : $m;
+            $messages[] = $this->message_start_delimeter . $m_lang . $this->message_end_delimeter . $this->message_new_line;
+        }
+        return $messages;
+    }
+
+    /**
+     * Clear messages
+     * 
+     * @return void
+     */
+    public function clear_messages()
+    {
+        $this->messages = array();
     }
 }

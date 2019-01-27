@@ -22,6 +22,20 @@ require 'Aho_model.php';
 class Aho_user_model extends Aho_Model {
 
     /**
+     * Activation code
+     * 
+     * @var string
+     */
+    public $activation_code;
+
+    /**
+     * User forgot password code
+     * 
+     * @var string
+     */
+    public $forgot_password_code;
+
+    /**
      * Allowed characters for username
      *
      * @var string
@@ -388,7 +402,7 @@ class Aho_user_model extends Aho_Model {
 
         $default_status = ($this->config->item('activation_method', 'aho_config') === FALSE) ? 1 : 0;
 
-        // Handling the password length is truncated if longer than 72 characters
+        // The password length is truncated if longer than 72 characters
         // See: https://paragonie.com/blog/2015/04/secure-authentication-php-with-long-term-persistence
         $hashed_password = password_hash(
             base64_encode(
@@ -400,10 +414,10 @@ class Aho_user_model extends Aho_Model {
         $data = array(
             $this->identity_column => $identity,
             'username' => $identity,
-            'user_password' => $hashed_password,
-            'user_email' => $email,
-            'user_activation_code' => $this->activation_code,
-            'user_status' => $default_status
+            'password' => $hashed_password,
+            'email' => $email,
+            'activation_code' => $this->activation_code,
+            'status' => $default_status
         );
 
         // Merge the additional data
