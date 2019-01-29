@@ -7,6 +7,8 @@ class MY_Controller extends REST_Controller {
 
     const DEFAULT_LIMIT = 50;
 
+    protected $_jwt_content = NULL;
+
     public function __construct($config = 'rest')
     {
         parent::__construct($config = 'rest');
@@ -102,19 +104,18 @@ class MY_Controller extends REST_Controller {
         $this->config->load('aho_config', TRUE);
 
         $http_auth = $this->input->server('HTTP_AUTHENTICATION') ?: $this->input->server('HTTP_AUTHORIZATION');
-        $jwt_key = $this->config->item('jwt_key', 'aho_config');
-        $jwt_algo = $this->config->item('jwt_algo', 'aho_config');
+        $jwt_config = $this->config->item('jwt', 'aho_config');
         list($jwt) = sscanf($this->input->server('HTTP_AUTHORIZATION'), 'Bearer %s');
 
         if ($jwt)
         {
-            $this->load->model('aho_auth_model', 'aho_auth');
-            $verify = $this->aho_auth->login_verify($jwt);
-            if ($verify === FALSE)
-            {
+            try {
+                $decoded = JWT::decode($jwt, $jwt_config['key'], array($jwt_config['algo']));
+                $this->_jwt_content = $decoded;
+            } catch (Exception $e) {
                 $_response = prep_response([
-                    'type' => 'unauthorized',
-                    'message' => $this->aho_auth->message_string()
+                    'type' => 'invalid_token',
+                    'message' => $e->getMessage()
                 ], REST_Controller::HTTP_UNAUTHORIZED, TRUE);
 
                 $this->response($_response, $_response['code']);

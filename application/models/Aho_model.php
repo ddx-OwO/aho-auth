@@ -28,34 +28,6 @@ class Aho_model extends CI_Model {
     const WEEK_IN_SECONDS = 7 * DAY_IN_SECONDS;
     const MONTH_IN_SECONDS = 30 * DAY_IN_SECONDS;
     const YEAR_IN_SECONDS = 365 * DAY_IN_SECONDS;
-    
-    /**
-     * Tables
-     * 
-     * @var array
-     */
-    public $tables = array();
-
-    /**
-     * User identity column
-     * 
-     * @var string
-     */
-    public $identity_column;
-
-    /**
-     * Activation code
-     * 
-     * @var string
-     */
-    public $activation_code;
-
-    /**
-     * User forgot password code
-     * 
-     * @var string
-     */
-    public $forgot_password_code;
 
     /**
      * Set
@@ -127,73 +99,14 @@ class Aho_model extends CI_Model {
      */
     protected $response = NULL;
 
-    /**
-     * Messages array
-     *
-     * @var array
-     */
-    protected $messages = array();
-
-    /**
-     * Message start delimeter
-     *
-     * @var string
-     */
-    protected $message_start_delimeter;
-
-    /**
-     * Message end delimeter
-     *
-     * @var string
-     */
-    protected $message_end_delimeter;
-
-    /**
-     * New line tag for each messages
-     *
-     * @var string
-     */
-    protected $message_new_line;
-
-    /**
-     * Salt type
-     * 
-     * @var string
-     */
-    private $salt_type;
-
     public function __construct()
     {
         parent::__construct();
 
-        // Auto load the database
+        // Load the database
         $this->load->database();
 
-        // Load the configuration file
-        $this->config->load('aho_config', TRUE);
-
-        // Get the language
-        $language = $this->config->item('aho_lang', 'aho_config');
-        if ($language === NULL)
-        {
-            $language = 'indonesian';
-        }
-
-        // Load the language file
-        $this->lang->load('aho', $language, FALSE, TRUE, __DIR__.'/../');
-
-        $this->load->helper(array('cookie', 'url', 'language', 'string', 'email', 'date'));
-
-        // Initialize objects
-        $this->tables = $this->config->item('tables', 'aho_config');
-        $this->identity_column = $this->config->item('identity_column', 'aho_config');
-        $this->cookies = $this->config->item('cookies', 'aho_config');
-        $this->join = $this->config->item('join', 'aho_config');
-        $this->salt_type = $this->config->item('salt_type', 'aho_config');
-
-        $this->message_start_delimeter = $this->config->item('message_start_delimeter', 'aho_config');
-        $this->message_end_delimeter = $this->config->item('message_end_delimeter', 'aho_config');
-        $this->message_new_line = $this->config->item('message_new_line', 'aho_config');
+        $this->load->library('message');
 
         // Initialize response for static return
         $this->response = new stdClass();
@@ -428,7 +341,7 @@ class Aho_model extends CI_Model {
             $this->_auth_order_by = NULL;
         }
 
-        $this->response = $this->db->get($table);
+        $this->response = $this->db->get($this->tables[$table]);
         return $this;
     }
 
@@ -440,7 +353,7 @@ class Aho_model extends CI_Model {
      * 
      * @return int|bool Return the affected rows or FALSE on failure
      */
-    public function add_bulk($table, $data = array())
+    public function safe_insert_batch($table, $data = array())
     {
         // Initialize batch variable
         $batch = array();
@@ -483,7 +396,7 @@ class Aho_model extends CI_Model {
      * @param array  $data
      * @return int|bool
      */
-    public function add($table, $data = NULL)
+    public function safe_insert($table)
     {
         if (isset($this->_auth_set) && ! empty($this->_auth_set))
         {
@@ -493,8 +406,6 @@ class Aho_model extends CI_Model {
             }
             $this->_auth_set = array();
         }
-
-        if ( ! empty($data))
 
         // Begin the transaction
         $this->db->trans_begin();
@@ -525,7 +436,7 @@ class Aho_model extends CI_Model {
      * @param string $table 
      * @return bool
      */
-    public function update($table)
+    public function safe_update($table)
     {
         if (isset($this->_auth_set) && ! empty($this->_auth_set))
         {
@@ -574,7 +485,7 @@ class Aho_model extends CI_Model {
      * @param string $table 
      * @return bool
      */
-    public function delete($table)
+    public function safe_delete($table)
     {
         if (isset($this->_auth_where) && ! empty($this->_auth_where))
         {
@@ -606,82 +517,5 @@ class Aho_model extends CI_Model {
 
         $this->db->trans_commit();
         return TRUE;
-    }
-
-    /**
-     * Set message delimeter
-     *
-     * Set message delimeters for output
-     *
-     * @param   string  $start  Start delimeter
-     * @param   string  $end    End delimeter
-     * @return  void
-     */
-    public function set_message_delimeter($start, $end)
-    {
-        $this->message_start_delimeter = $start;
-        $this->message_end_delimeter = $end;
-    }
-
-    /**
-     * Set message from smartc_auth_lang array or set your own message for output
-     *
-     * @param array|string $message Message line
-     * @return  void
-     */
-
-    public function set_message($message)
-    {
-        if(is_array($message))
-        {
-            foreach($message as $value)
-            {
-                $this->messages[] = $value;
-            }
-        }
-        else
-        {
-            $this->messages[] = $message;
-        }
-    }
-
-    /**
-     * Get messages
-     *
-     * @return string
-     */
-
-    public function message_string()
-    {
-        $messages = '';
-
-        foreach ($this->messages as $m)
-        {
-            $m_lang = $this->lang->line($m) ? $this->lang->line($m) : $m;
-            $messages .= $this->message_start_delimeter . $m_lang . $this->message_end_delimeter . $this->message_new_line;
-        }
-        return $messages;
-    }
-
-    public function message_array()
-    {
-        $messages = array();
-
-        foreach ($this->messages as $m)
-        {
-            $m_lang = $this->lang->line($m) ? $this->lang->line($m) : $m;
-            $messages[] = $this->message_start_delimeter . $m_lang . $this->message_end_delimeter . $this->message_new_line;
-        }
-        return $messages;
-    }
-
-    /**
-     * Clear messages
-     * 
-     * @return void
-     */
-    public function clear_messages()
-    {
-        $this->messages = array();
     }
 }

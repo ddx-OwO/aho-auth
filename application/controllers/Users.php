@@ -15,14 +15,14 @@ class Users extends MY_Controller {
     {
         parent::__construct();
 
-        $this->load->model('aho_auth_model', 'aho_auth');
+        $this->load->model('aho_model');
         $this->identity_column = $this->aho_auth->identity_column;
-        $this->_check_token();
+        //$this->_prepare_jwt_auth();
     }
 
     public function index_get($identity = NULL)
     {
-        return $this->response(['ani' => 'budi']);
+        $this->response($this->aho_model);
     }
 
     /*public function index_get($identity = NULL)

@@ -5,17 +5,11 @@ class Auth extends MY_Controller {
 
     private $identity_column;
 
-    private $jwt_key;
-
-    private $jwt_algo;
-
     public function __construct()
     {
         parent::__construct();
         $this->load->model('aho_auth_model', 'aho_auth');
         $this->identity_column = $this->aho_auth->identity_column;
-        $this->jwt_key = $this->config->item('jwt_key', 'aho_config');
-        $this->jwt_algo = $this->config->item('jwt_algo', 'aho_config');
     }
 
 	public function index_post()
@@ -47,6 +41,31 @@ class Auth extends MY_Controller {
     {
         $refresh_token = $this->post('refresh_token', TRUE);
         $user_id = $this->post('user_id', TRUE);
+
+        if (empty($refresh_token) || empty($user_id))
+        {
+            $_response = prep_response([
+                'type' => 'bad_request',
+                'message' => 'Mismatch fields'
+            ], REST_Controller::HTTP_BAD_REQUEST, TRUE);
+
+            $this->response($_response, $_response['code']);
+        }
+
+        $token = $this->aho_auth->login_refresh($refresh_token, $user_id);
+
+        if ($token !== FALSE)
+        {
+            $_response = prep_response($token, REST_Controller::HTTP_OK);
+        }
+        else
+        {
+            $_response = prep_response([
+                'type' => 'invalid_token',
+                'message' => $this->aho_auth->message_string()
+            ], REST_Controller::HTTP_UNAUTHORIZED, TRUE);
+        }
+        $this->response($_response, $_response['code']);
     }
 
     public function csrf_get()

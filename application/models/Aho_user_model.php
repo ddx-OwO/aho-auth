@@ -17,9 +17,28 @@
 
 defined('BASEPATH') or exit('No direct access script allowed');
 
-require 'Aho_model.php';
+// require 'Aho_model.php';
 
-class Aho_user_model extends Aho_Model {
+class Aho_user_model extends CI_Model {
+
+    /**
+     * Tables
+     * 
+     * @var array
+     */
+    public $tables = array();
+
+    /**
+     * User identity column
+     * 
+     * @var string
+     */
+    public $identity_column;
+
+    /**
+     * @var array
+     */
+    public $join = array();
 
     /**
      * Activation code
@@ -67,10 +86,16 @@ class Aho_user_model extends Aho_Model {
     {
         parent::__construct();
 
+        $this->load->library('message');
+        $this->load->model('aho_model');
+
+        $this->tables = $this->config->item('tables', 'aho_config');
         $this->protected_users = $this->config->item('protected_users', 'aho_config');
         $this->allowed_chars = $this->config->item('username_allowed_chars', 'aho_config');
         $this->username_max_length = $this->config->item('username_max_length', 'aho_config');
         $this->username_min_length = $this->config->item('username_min_length', 'aho_config');
+        $this->identity_column = $this->config->item('identity_column', 'aho_config');
+        $this->join = $this->config->item('join', 'aho_config');
     }
 
     /**
@@ -90,7 +115,7 @@ class Aho_user_model extends Aho_Model {
      * Get users
      * 
      * @param array $groups
-     * @return static
+     * @return Aho_model static
      */
     public function users($groups = array())
     {
@@ -109,7 +134,7 @@ class Aho_user_model extends Aho_Model {
             $this->db->where_in("{$this->tables['user_groups']}.{$this->join['groups']}", $groups);
         }
 
-        return $this->get("{$this->tables['users']}");
+        return $this->db->get($this->tables['users']);
     }
 
     /**
@@ -120,25 +145,12 @@ class Aho_user_model extends Aho_Model {
      */
     public function is_user_exist($identity)
     {
-        $query = $this->db->where([$this->identity_column => $identity])
+        $query = $this->db->where($this->identity_column, $identity)
                           ->limit(1)
                           ->get($this->tables['users']);
 
         return $query->num_rows() > 0;
     }
-
-    /**
-     * Username check
-     * 
-     * @param string $username
-     * @return bool
-     */
-    /*public function username_check($username)
-    {
-        return $this->db->where('username', $username)
-                        ->limit(1)
-                        ->count_all_results($this->tables['users']) > 0;
-    }*/
 
     /**
      * Username availability check. This method also can be used in Form_validation callback
@@ -155,7 +167,7 @@ class Aho_user_model extends Aho_Model {
         // Check username allowed chars
         if($match === FALSE )
         {
-            $this->set_message(
+            $this->message->set_message(
                 sprintf(
                     lang('account_create_invalid_identity'), 
                     lang('username_label')
@@ -170,7 +182,7 @@ class Aho_user_model extends Aho_Model {
         // Check username minimum length
         else if ($length < $this->username_min_length && $this->username_min_length !== 0)
         {
-            $this->set_message(
+            $this->message->set_message(
                 sprintf(
                     lang('account_create_min_length'), 
                     lang('username_label'), 
@@ -189,7 +201,7 @@ class Aho_user_model extends Aho_Model {
         // Check username maximum length
         else if ($length > $this->username_max_length && $this->username_max_length !== 0)
         {
-            $this->set_message(
+            $this->message->set_message(
                 sprintf(
                     lang('account_create_max_length'), 
                     lang('username_label'), 
@@ -206,26 +218,30 @@ class Aho_user_model extends Aho_Model {
             return FALSE;
         }
 
-        // Check existed username
-        if($this->smartc_auth_model->username_check($username) === TRUE)
+        // Check existed identity
+        if($this->is_user_exist($username) === TRUE)
         {
-            $this->set_message(
+            $this->message->set_message(
                 sprintf(
                     $this->lang->line('account_create_duplicate_identity'), 
                     $this->lang->line('username_label')
                 )
             );
-            $this->form_validation->set_message('username_check', lang('account_create_duplicate_identity'));
+            $this->form_validation->set_message('username_check', 
+                lang('account_create_duplicate_identity')
+            );
             return FALSE;
         }
 
-        $this->set_message(
+        $this->message->set_message(
             sprintf(
                 lang('account_create_available_identity'), 
                 lang('username_label')
             )
         );
-        $this->form_validation->set_message('username_check', lang('account_create_available_identity'));
+        $this->form_validation->set_message('username_check', 
+            lang('account_create_available_identity')
+        );
         return TRUE;
     }
 
@@ -237,7 +253,7 @@ class Aho_user_model extends Aho_Model {
      */
     public function email_check($email)
     {
-        return $this->db->where('user_email', $email)
+        return $this->db->where('email', $email)
                         ->limit(1)
                         ->count_all_results($this->tables['users']) > 0;
     }
@@ -246,31 +262,29 @@ class Aho_user_model extends Aho_Model {
      * Get user by identity
      * 
      * @param string $identity 
-     * @return static
+     * @return CI_DB_Result
      */
     public function user($identity)
     {
-        $this->where(["{$this->tables['users']}.{$this->identity_column}" => $identity]);
-        $this->limit(1);
-        $this->order_by($this->identity_column, 'desc');
-        $this->users();
-
-        return $this;
+        $this->db
+             ->where("{$this->tables['users']}.{$this->identity_column}", $identity)
+             ->limit(1)
+             ->order_by($this->identity_column, 'desc');
+        return $this->users();
     }
 
     /**
      * Get user by id
      * 
      * @param int $id 
-     * @return static
+     * @return CI_DB_Result
      */
     public function user_id($id)
     {
-        $this->where(["{$this->tables['users']}.user_id" => $id]);
-        $this->limit(1);
-        $this->users();
-
-        return $this;
+        $this->db
+             ->where("{$this->tables['users']}.user_id", $id)
+             ->limit(1);
+        return $this->users();
     }
 
     /**
@@ -286,26 +300,27 @@ class Aho_user_model extends Aho_Model {
     public function user_update($identity, $data = array(), $groups = array())
     {
         $update_data = $data;
-        $user_data = $this->select('user_id,username,user_email,'.$this->identity_column)
+        $user_data = $this->db
+                          ->select('user_id,username,email,'.$this->identity_column)
                           ->user($identity)
                           ->row();
 
         if (array_key_exists('username', $update_data))
         {
-            if($user_data->username != $update_data['username'])
+            if($user_data->username !== strtolower($update_data['username']))
             {
-                if($this->username_check($update_data['username']) === FALSE)
+                if($this->username_check(strtolower($update_data['username'])) === TRUE)
                 {
                     return FALSE;
                 }
             }
         }
         
-        if(array_key_exists('user_email', $update_data))
+        if(array_key_exists('email', $update_data))
         {
-            if($user_data->user_email != $update_data['user_email'])
+            if($user_data->user_email !== strtolower($update_data['email']))
             {
-                if($this->smartc_auth_model->email_check($update_data['user_email']))
+                if($this->email_check(strtolower($update_data['email'])))
                 {
                     $this->set_message(
                         sprintf(
@@ -318,9 +333,10 @@ class Aho_user_model extends Aho_Model {
             }
         }
 
-        $update = $this->set($update_data)
+        $update = $this->aho_model
+                       ->set($update_data)
                        ->where($this->identity_column, $identity)
-                       ->update($this->tables['users']);
+                       ->safe_update($this->tables['users']);
         
         if ($update)
         {
@@ -330,7 +346,7 @@ class Aho_user_model extends Aho_Model {
                 {
                     $groups = array($groups);
                 }
-                $this->smartc_auth_model->move_to_group($user_data->user_id, $groups);
+                // $this->smartc_auth_model->move_to_group($user_data->user_id, $groups);
             }
             $this->set_message('account_update_success');
             return TRUE;
@@ -370,11 +386,9 @@ class Aho_user_model extends Aho_Model {
                 $this->set_message('account_delete_success');
                 return TRUE;
             }
-            else
-            {
-                $this->set_message('account_delete_failed');
-                return FALSE;
-            }
+
+            $this->set_message('account_delete_failed');
+            return FALSE;
         }
         else 
         {
@@ -396,7 +410,6 @@ class Aho_user_model extends Aho_Model {
 
     public function register($identity, $password, $email, $extra = NULL, $groups = NULL)
     {
-
         // Generate activation code hash
         $this->activation_code = hash('sha256', $this->security->get_random_bytes(128));
 
@@ -412,10 +425,9 @@ class Aho_user_model extends Aho_Model {
         );
 
         $data = array(
-            $this->identity_column => $identity,
-            'username' => $identity,
+            $this->identity_column => strtolower($identity),
             'password' => $hashed_password,
-            'email' => $email,
+            'email' => strtolower($email),
             'activation_code' => $this->activation_code,
             'status' => $default_status
         );
@@ -427,7 +439,9 @@ class Aho_user_model extends Aho_Model {
         }
 
         // Get the user id
-        $id = $this->set($data)->add($this->tables['users']);
+        $id = $this->aho_model
+                   ->set($data)
+                   ->safe_insert($this->tables['users']);
 
         if ($id !== FALSE)
         {

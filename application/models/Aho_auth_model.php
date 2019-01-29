@@ -17,11 +17,9 @@
 
 defined('BASEPATH') or exit('No direct access script allowed');
 
-require 'Aho_model.php';
-
 use Firebase\JWT\JWT;
 
-class Aho_auth_model extends Aho_Model {
+class Aho_auth_model extends CI_Model {
 
     private $jwt;
 
@@ -30,6 +28,8 @@ class Aho_auth_model extends Aho_Model {
         parent::__construct();
 
         $this->load->library(array('form_validation', 'email', 'session', 'user_agent'));
+        $this->load->model('aho_model');
+        $this->load->model('aho_user_model', 'aho_user');
 
         $this->jwt = $this->config->item('jwt', 'aho_config');
     }
@@ -58,7 +58,7 @@ class Aho_auth_model extends Aho_Model {
 
     public function login($identity, $password, $rememberme = FALSE)
     {
-        $user_data = $this->db
+        $user_data = $this->aho_model
                           ->select('user_id,username,password,email,status,'.$this->identity_column)
                           ->get($this->tables['users'])
                           ->row();
@@ -79,29 +79,34 @@ class Aho_auth_model extends Aho_Model {
 
         if (intval($user_data->status) === 1)
         {
-            $hashed_password = base64_encode(hash('sha256', $password, TRUE));
+            $hashed_password = base64_encode(
+                hash('sha256', $password, TRUE)
+            );
 
             if (password_verify($hashed_password, $user_data->password) === TRUE)
             {
                 $ua = $this->agent->agent_string();
                 $platform = $this->agent->platform();
                 $ip_address = $this->input->ip_address();
-                $exp = $rememberme ? $this->jwt['remember_expiration'] : $this->jwt['expiration'];
-                $time = time();
                 $r_token = $this->token_generate();
+                $r_token_exp = $rememberme ? $this->jwt['remember_expiration'] : $this->jwt['refresh_token_expiration'];
+
                 $payload = array(
                     'user_id' => $user_data->user_id,
-                    'identity' => $user_data->{$this->identity_column},
+                    $this->identity_column => $user_data->{$this->identity_column},
+                    'email' => $user_data->email,
                     'refresh_token' => $r_token
                 );
-                $jwt = $this->jwt_generate($payload, $exp, $time);
+
+                $jwt = $this->jwt_generate($payload, $this->jwt['expiration']);
+
                 $login_data = array(
                     'user_id' => $user_data->user_id,
                     'refresh_token' => $r_token,
                     'user_agent' => $ua,
                     'platform' => $platform,
                     'ip_address' => $ip_address,
-                    'expires_in' => date('Y-m-d H:i:s', $this->jwt['refresh_token_expiration']+$time)
+                    'expires_in' => date('Y-m-d H:i:s', time()+$r_token_exp)
                 );
 
                 // Insert login data to database
@@ -114,7 +119,7 @@ class Aho_auth_model extends Aho_Model {
                 $this->set_message('account_login_success');
                 return array(
                     'access_token' => $jwt, 
-                    'expires_in' => $exp,
+                    'expires_in' => $this->jwt['expiration'],
                     'refresh_token' => $r_token
                 );
             }
@@ -137,13 +142,14 @@ class Aho_auth_model extends Aho_Model {
         }
     }
 
-    public function jwt_generate($data, $expire = 7200, $now = time())
+    public function jwt_generate($data, $expire = 7200)
     {
+        $now = time();
         $iss = config_item('base_url');
         $aud = $this->input->server('HTTP_REMOTE_ADDR');
         $iat = $now;
         $nbf = $now + 5;
-        $exp = $expire;
+        $exp = $expire + $now;
         $claims = array(
             "iss" => $iss,
             "aud" => $aud,
@@ -165,11 +171,61 @@ class Aho_auth_model extends Aho_Model {
         return bin2hex(random_bytes(32));
     }
 
-    public function token_verify($token, $user_id)
+    public function login_refresh($refresh_token, $user_id)
     {
-        $data = $this->login_data($token, $user_id)->row();
+        $data = $this->login_data($refresh_token, $user_id)->row();
+        if (empty($data))
+        {
+            $this->set_message('account_error_token_expired');
+            return FALSE;
+        }
 
+        $match = hash_equals($data->refresh_token, $refresh_token);
+        if ($match)
+        {
+            $exp = strtotime($data->expires_in);
+            if ($exp < time() || intval($data->revoked) === 1)
+            {
+                $this->login_revoke($token);
+                $this->set_message('account_error_token_expired');
+                return FALSE;
+            }
+
+            $new_token = $this->token_generate();
+            $user_data = $this->aho_user
+                              ->select('user_id,username,email,'.$this->identity_column)
+                              ->user_id($user_id)
+                              ->row();
+            $payload = array(
+                'refresh_token' => $new_token
+            );
+            $payload = array_merge($payload, $user_data);
+            $jwt = $this->jwt_generate($payload, $this->jwt['expiration']);
+
+            // Update refresh token on database
+            $update = $this->set('refresh_token', $new_token)
+                           ->where('refresh_token', $refresh_token)
+                           ->update($this->tables['logins']);
+            return array(
+                'access_token' => $jwt, 
+                'expires_in' => $this->jwt['expiration'],
+                'refresh_token' => $r_token
+            );
+        }
         $this->set_message('account_error_token_expired');
+        return FALSE;
+    }
+
+    /**
+     * Set token revoked flag
+     * @param string $token
+     * @return string
+     */
+    public function login_revoke($token)
+    {
+        $this->set('revoked', 1);
+        $this->where('refresh_token', $token);
+        return $this->update($this->tables['logins']);
     }
 
     /**
@@ -420,47 +476,32 @@ class Aho_auth_model extends Aho_Model {
     /**
      * Get all logins data
      * 
-     * @return static
+     * @return CI_DB_result
      */
 
     public function logins()
     {
-        return $this->get($this->tables['logins']);
+        return $this->db->get($this->tables['logins']);
     }
 
     /**
      * Get login data from login id
      * 
      * @param int   $login_id 
-     * @return static
+     * @return CI_DB_result
      */
 
     public function login_data($token, $user_id = NULL)
     {
         if (isset($user_id))
         {
-            $this->where('user_id', $user_id);
+            $this->db->where('user_id', $user_id);
         }
 
-        $this->where('token', $token);
-        $this->limit(1);
-        $this->logins();
+        $this->db->where('refresh_token', $token)
+                 ->limit(1)
 
-        return $this;
-    }
-
-    /**
-     * Deactivate specific login id
-     * 
-     * @param int $login_id 
-     * @return bool
-     */
-
-    public function deactivate_login($identifier)
-    {
-        return $this->where('identifier', $identifier)
-                    ->set('status', 0)
-                    ->update($this->tables['logins']);
+        return $this->logins();
     }
 
     /**
@@ -471,8 +512,8 @@ class Aho_auth_model extends Aho_Model {
      */
     public function update_last_login($identifier)
     {
-        $this->where('identifier', $identifier)
-             ->set('time', time());
+        $this->db->where('identifier', $identifier)
+                ->set('time', time());
         return $this->update($this->tables['logins']);
     }
 
