@@ -15,17 +15,12 @@ class Users extends MY_Controller {
     {
         parent::__construct();
 
-        $this->load->model('aho_model');
-        $this->identity_column = $this->aho_auth->identity_column;
-        //$this->_prepare_jwt_auth();
+        $this->load->model('aho_user_model', 'aho_user');
+        $this->identity_column = $this->config->item('identity_column', 'aho_config');
+        $this->_prepare_jwt_auth();
     }
 
     public function index_get($identity = NULL)
-    {
-        $this->response($this->aho_model);
-    }
-
-    /*public function index_get($identity = NULL)
     {
         $_response = '';
         $fields = $this->get('fields', TRUE);
@@ -56,16 +51,18 @@ class Users extends MY_Controller {
 
             $valid_fields = implode(',', $valid_fields);
 
-            $this->smartc_auth->select($valid_fields);
+            $this->db->select($valid_fields);
         }
         else
         {
-            $this->smartc_auth->select('user_id,username,user_email,'.$this->identity_column);
+            $this->db->select('user_id,username,email,'.$this->identity_column);
         }
 
         if (isset($identity))
         {
-            $data = $this->smartc_auth->user($identity)->row();
+            $data = $this->aho_user
+                         ->user($identity)
+                         ->row();
 
             if (empty($data))
             {
@@ -81,20 +78,19 @@ class Users extends MY_Controller {
         }
         else
         {
-            $data = $this->smartc_auth->limit($limit)
-                                      ->offset($offset)
-                                      ->users()
-                                      ->result();
-
+            $this->db->limit($limit, $offset);
+            $data = $this->aho_user
+                         ->users()
+                         ->result();
             $_response = prep_response($data, REST_Controller::HTTP_OK, $extra);
         }
 
-        $this->set_response($_response, $_response['code']);
+        $this->set_response($this->_jwt_content, $_response['code']);
     }
 
-    /*public function index_post()
+    public function index_post()
     {
-        $identity = $this->post($this->identity_column, TRUE);
+        $identity = $this->post('username', TRUE);
         $password = $this->post('password');
         $email = $this->post('email');
         $extra_data = $this->post('extra_data');
@@ -103,11 +99,11 @@ class Users extends MY_Controller {
 
         $validations = array(
             array(
-                'field' => $this->identity_column,
-                'label' => $this->identity_column,
+                'field' => 'username',
+                'label' => 'Username',
                 'rules' => array(
                     'required',
-                    array('username_check', array($this->smartc_auth, 'username_check'))
+                    array('username_check', array($this->aho_user, 'username_check'))
                 )
             ),
             array(
@@ -125,17 +121,18 @@ class Users extends MY_Controller {
 
         if ($this->form_validation->run() === TRUE)
         {
-            if ($this->smartc_auth->register($identity, $password, $email, $extra_data, $groups))
+            if ($this->aho_user->register($identity, $password, $email, $extra_data, $groups))
             {           
                 $_response = prep_response([
-                    'message' => $this->smartc_auth->message()
+                    'message' => $this->message->message_string()
                 ], REST_Controller::HTTP_CREATED);
             }
             else
             {
-                // Something wrong here, i'll fix it later '-')b
+                // Something went wrong here. 
+                // Unpredictable bugs feature.
                 $_response = prep_response([
-                    'message' => $this->smartc_auth->message()
+                    'message' => $this->message->message_string()
                 ], REST_Controller::HTTP_INTERNAL_SERVER_ERROR, TRUE);
 
                 $this->response($_response, $_response['code']);
@@ -155,20 +152,20 @@ class Users extends MY_Controller {
     public function index_delete()
     {
         $identity = $this->delete('identity', TRUE);
-        $delete = $this->smartc_auth->user_delete($identity);
+        $delete = $this->aho_user->user_delete($identity);
         $_response = '';
 
         if ($delete)
         {
             $_response = prep_response([
-                'message' => $this->smartc_auth->message()
+                'message' => $this->message->message()
             ], REST_Controller::HTTP_OK);
         }
         else
         {
             $_response = prep_response([
                 'type' => 'bad_request',
-                'message' => $this->smartc_auth->message()
+                'message' => $this->message->message()
             ], REST_Controller::HTTP_BAD_REQUEST, TRUE);
         }
 
@@ -177,12 +174,12 @@ class Users extends MY_Controller {
 
     private function _validate_fields($table, $fields, $filter_sensitive_data = TRUE)
     {
-        $valid_columns = $this->db->list_fields($this->tables['users']);
+        $db_columns = $this->db->list_fields($this->tables['users']);
         $fields = explode(',', $fields);
         $valid_fields = array();
 
         // We need to validate the fields and hide the sensitive data
-        foreach ($valid_columns as $column) 
+        foreach ($db_columns as $column) 
         {
             if (in_array($column, $fields))
             {
@@ -201,5 +198,5 @@ class Users extends MY_Controller {
         }
 
         return $valid_fields;
-    }*/
+    }
 }

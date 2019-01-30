@@ -88,6 +88,7 @@ class Aho_user_model extends CI_Model {
 
         $this->load->library('message');
         $this->load->model('aho_model');
+        $this->load->model('aho_group_model', 'aho_group');
 
         $this->tables = $this->config->item('tables', 'aho_config');
         $this->protected_users = $this->config->item('protected_users', 'aho_config');
@@ -322,7 +323,7 @@ class Aho_user_model extends CI_Model {
             {
                 if($this->email_check(strtolower($update_data['email'])))
                 {
-                    $this->set_message(
+                    $this->message->set_message(
                         sprintf(
                             $this->lang->line('account_create_duplicate_identity'), 
                             $this->lang->line('email_label')
@@ -348,12 +349,12 @@ class Aho_user_model extends CI_Model {
                 }
                 // $this->smartc_auth_model->move_to_group($user_data->user_id, $groups);
             }
-            $this->set_message('account_update_success');
+            $this->message->set_message('account_update_success');
             return TRUE;
         }
         else
         {
-            $this->set_message('account_update_failed');
+            $this->message->set_message('account_update_failed');
             return FALSE;
         }
     }
@@ -378,7 +379,7 @@ class Aho_user_model extends CI_Model {
                 }
             }
 
-            $delete = $this->where($this->identity_column, $identity)
+            $delete = $this->db->where($this->identity_column, $identity)
                            ->delete($this->tables['users']);
             
             if($delete)
@@ -426,6 +427,7 @@ class Aho_user_model extends CI_Model {
 
         $data = array(
             $this->identity_column => strtolower($identity),
+            'username' => strtolower($identity),
             'password' => $hashed_password,
             'email' => strtolower($email),
             'activation_code' => $this->activation_code,
@@ -449,7 +451,7 @@ class Aho_user_model extends CI_Model {
             {
                 foreach ($groups as $group_id) 
                 {
-                    $this->add_to_group($id, $group_id);
+                    $this->aho_group->add_to_group($id, $group_id);
                 }
             }
             else
@@ -457,7 +459,7 @@ class Aho_user_model extends CI_Model {
                 $default_group = $this->config->item('user_default_group', 'aho_config');
                 $group = $this->select('group_id')->where('group_name', $default_group)->groups()->row();
 
-                $this->add_to_group($id, $group->group_id);
+                $this->aho_group->add_to_group($id, $group->group_id);
 
                 unset($group, $default_group);
             }
@@ -483,23 +485,23 @@ class Aho_user_model extends CI_Model {
 
                 if ($this->email->send() === TRUE)
                 {
-                    $this->set_message('account_email_activation_success');
+                    $this->message->set_message('account_email_activation_success');
                     return $id;
                 }
                 else
                 {
-                    $this->set_message('account_create_success');
-                    $this->set_message('account_activation_email_failed');
+                    $this->message->set_message('account_create_success');
+                    $this->message->set_message('account_activation_email_failed');
                     return FALSE;
                 }
             }
 
-            $this->set_message('account_create_success');
+            $this->message->set_message('account_create_success');
             return $id;
         }
         else
         {
-            $this->set_message('account_create_failed');
+            $this->message->set_message('account_create_failed');
             return FALSE;
         }
     }
@@ -513,8 +515,9 @@ class Aho_user_model extends CI_Model {
      */
     public function set_user_status($identity, $status)
     {
-        $update = $this->where([$this->identity_column => $identity])
-                       ->set('user_status', $status)
+        $update = $this->db
+                       ->where($this->identity_column, $identity)
+                       ->set('status', $status)
                        ->update($this->tables['users']);
         return $update;
     }

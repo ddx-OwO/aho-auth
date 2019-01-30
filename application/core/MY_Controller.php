@@ -105,7 +105,7 @@ class MY_Controller extends REST_Controller {
 
         $http_auth = $this->input->server('HTTP_AUTHENTICATION') ?: $this->input->server('HTTP_AUTHORIZATION');
         $jwt_config = $this->config->item('jwt', 'aho_config');
-        list($jwt) = sscanf($this->input->server('HTTP_AUTHORIZATION'), 'Bearer %s');
+        list($jwt) = sscanf($http_auth, 'Bearer %s');
 
         if ($jwt)
         {

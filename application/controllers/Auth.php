@@ -22,7 +22,7 @@ class Auth extends MY_Controller {
         if ($token !== FALSE)
         {
             $_response = prep_response([
-                'message' => $this->aho_auth->message_string(),
+                'message' => $this->message->message_string(),
             ], REST_Controller::HTTP_OK);
             $_response['data'] = array_merge($_response['data'], $token);
         }
@@ -30,7 +30,7 @@ class Auth extends MY_Controller {
         {
             $_response = prep_response([
                 'type' => 'bad_credentials',
-                'message' => $this->aho_auth->message_string()
+                'message' => $this->message->message_string()
             ], REST_Controller::HTTP_UNAUTHORIZED, TRUE);      
         }
 
@@ -62,7 +62,7 @@ class Auth extends MY_Controller {
         {
             $_response = prep_response([
                 'type' => 'invalid_token',
-                'message' => $this->aho_auth->message_string()
+                'message' => $this->message->message_string()
             ], REST_Controller::HTTP_UNAUTHORIZED, TRUE);
         }
         $this->response($_response, $_response['code']);

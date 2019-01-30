@@ -23,7 +23,7 @@ class Welcome extends CI_Controller {
 	public function index()
 	{
         $this->load->model('Aho_group_model', 'aho_group');
-		var_dump($this->aho_group->remove_group(3));
+		var_dump(date('Y-m-d H:i:s', time()));
 	}
 
 	public function test_get()
