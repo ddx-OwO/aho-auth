@@ -194,7 +194,6 @@ class Aho_auth_model extends CI_Model {
     public function login_refresh($refresh_token, $user_id)
     {
         $data = $this->login_data($refresh_token, $user_id)->row();
-        $recheck = $this->config->item('login_recheck', 'aho_config');
         if (empty($data))
         {
             $this->message->set_message('account_error_token_invalid');
@@ -204,7 +203,7 @@ class Aho_auth_model extends CI_Model {
         $match = hash_equals($data->refresh_token, $refresh_token);
         if ($match)
         {
-            if ($recheck > (time() - strtotime($data->login_at)))
+            if ($this->jwt['expiration'] > (time() - strtotime($data->login_at)))
             {
                 $this->message->set_message('You just refreshed your token');
                 return FALSE;
@@ -242,6 +241,7 @@ class Aho_auth_model extends CI_Model {
                 'refresh_token' => $new_token
             );
         }
+        
         $this->message->set_message('account_error_token_invalid');
         return FALSE;
     }
@@ -265,61 +265,6 @@ class Aho_auth_model extends CI_Model {
         }
         return $this->db->update($this->tables['logins']);
     }
-
-    /**
-     * Verify login session
-     * 
-     * @param string $jwt
-     * @return string|bool
-     */
-    /*public function login_verify($jwt)
-    {
-        try {
-            $decoded = JWT::decode($jwt, $this->jwt['key'], array($this->jwt['algo']));
-            $data = $decoded->data;
-            $login_data = $this->login_data($data->user_id, $data->token)->row();
-
-            if ( ! empty($login_data))
-            {
-                $match = hash_equals($login_data->token, $data->token);
-                return $match ? $data : FALSE;
-            }
-            unset($login_data);
-            $this->set_message('account_error_token_expired');
-            return FALSE;
-        } catch (Exception $e) {
-            $this->set_message($e->getMessage());
-            return FALSE;
-        }
-    }*/
-
-    /*public function is_logged_in()
-    {
-        $token = get_cookie($this->cookies['token']);
-        return
-    }*/
-
-    /*public function login_verify($token)
-    {
-        $user_id = $this->session->userdata('user_id') ? $user_id : get_cookie($this->cookies['token']);
-        $login_data = $this->where('user_id', $user_id)
-                           ->login_data($token)
-                           ->row();
-
-        if ( ! empty($login_data))
-        {
-            $match = hash_equals($login_data->token, $token);
-
-            if ($match && ($login_data->expires_in < time()))
-            {
-                $this->set_message('account_error_token_expired');
-                return FALSE;
-            }
-            return $match;
-        }
-        $this->set_message('account_error_token_expired');
-        return FALSE;
-    }*/
 
     /**
      * Logout
@@ -350,70 +295,6 @@ class Aho_auth_model extends CI_Model {
         $this->session->sess_regenerate(TRUE);
 
         $this->set_message('account_logout_success');
-    }
-
-    /**
-     * Regenerate token cookie and save it to database
-     * 
-     * @param string $identifier
-     * @return bool
-     */
-
-    public function regenerate_token($identifier)
-    {
-        $login_data = $this->login_data($identifier)->row();
-
-        $user_data = $this->select('user_id,username,user_email,'.$this->identity_column)
-                          ->user_id($login_data->user_id)
-                          ->row();
-
-        if ( ! empty($user_data) && ! empty($login_data))
-        {
-            $time = time();
-
-            //Deactivate expired token
-            if ($time > $login_data->expiration_time)
-            {
-                $this->deactivate_login($identifier);
-                return FALSE;
-            }
-
-            // Regenerate token
-            $token = bin2hex($this->security->get_random_bytes(128));
-            $token_hash = hash('sha256', $token);
-
-            // Regenerate session id
-            $this->session->sess_regenerate(TRUE);
-
-            // We store the hashed token on database and plain token in cookie and session
-            $data = array(
-                'token' => $token_hash,
-                'time' => $time,
-            );
-
-            $update = $this->set($data)
-                           ->where(['login_id' => $login_data->login_id, 'user_id' => $user_data->user_id])
-                           ->update($this->tables['logins']);
-
-            if($update === FALSE)
-            {
-                return FALSE;
-            }
-
-            $expire = $login_data->expiration_time - $time;
-
-            $this->update_last_login($identifier);
-            $this->set_login_cookie($user_data->{$this->identity_column}, $token_identifier, $token, $expire);
-
-            $user_data->token = $token;
-            $this->set_session($user_data);
-
-            return TRUE;
-        }
-        else
-        {
-            return FALSE;
-        }
     }
 
     /**
