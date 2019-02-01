@@ -17,6 +17,8 @@
 
 defined('BASEPATH') or exit('No direct access allowed');
 
+date_default_timezone_set('Asia/Jakarta');
+
 /*
 | -------------------------------------------------------------------------
 | Tables
@@ -111,10 +113,8 @@ $config['protected_users'] = array('admin');
  */
 $config['cookies']['identity'] = 'user';
 $config['cookies']['token'] = 'token';
-$config['cookies']['token_identifier'] = 'token_identifier';
-$config['cookies']['login_id'] = 'login_id';
 $config['cookies']['expiration'] = 7200;
-$config['cookies']['remember_expiration'] = 31536000;
+$config['cookies']['remember_expiration'] = 86400;
 
 /*
  | -------------------------------------------------------------------------
@@ -132,16 +132,19 @@ $config['login_recheck'] = 600;
  | Google reCAPTCHA keys
  | -------------------------------------------------------------------------
 */
-$config['grecaptcha']['public_key'] = 'YOUR KEY HERE';
-$config['grecaptcha']['secret_key'] = 'YOUR KEY HERE';
+$config['grecaptcha']['site_key'] = '';
+$config['grecaptcha']['secret_key'] = '';
 
 /*
  | -------------------------------------------------------------------------
  | JWT configs
  | -------------------------------------------------------------------------
 */
-$config['jwt_key'] = 'YOUR KEY HERE';
-$config['jwt_alg'] = 'HS256';
+$config['jwt']['key'] = '';
+$config['jwt']['algo'] = 'HS256';
+$config['jwt']['expiration'] = 1800;
+$config['jwt']['refresh_token_expiration'] = 86400;
+$config['jwt']['remember_expiration'] = 259200;
 
 /*
  | -------------------------------------------------------------------------
@@ -149,17 +152,18 @@ $config['jwt_alg'] = 'HS256';
  | -------------------------------------------------------------------------
  */
 $config['salt_type'] = PASSWORD_BCRYPT; // PHP Password constant algo
-
 $config['track_login_attempts'] = TRUE;
 $config['max_login_attempts'] = 3; // Max login attempts
 $config['lockout_time'] = 100; // Lockout time in seconds
+
+$config['extend_login'] = FALSE;
 
 /*
  | -------------------------------------------------------------------------
  | Misc options
  | -------------------------------------------------------------------------
  */
-$config['username_min_length'] = 4; // Set to 0 for no minimal length
+$config['username_min_length'] = 4;
 $config['username_max_length'] = 32; // Set to 0 for no maximal length
 $config['username_allowed_chars'] = 'a-z0-9_'; // Regular expression for allowed characters
 $config['password_min_length'] = 4;
