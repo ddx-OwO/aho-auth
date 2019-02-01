@@ -42,7 +42,7 @@ class Aho_auth_model extends CI_Model {
     {
         parent::__construct();
 
-        $this->load->library(array('form_validation', 'email', 'session', 'user_agent', 'message'));
+        $this->load->library(array('form_validation', 'email', 'user_agent', 'message'));
         $this->load->model('aho_model');
         $this->load->model('aho_user_model', 'aho_user');
 
@@ -108,6 +108,7 @@ class Aho_auth_model extends CI_Model {
                 $ip_address = $this->input->ip_address();
                 $r_token = $this->token_generate();
                 $r_token_exp = $rememberme ? $this->jwt['remember_expiration'] : $this->jwt['refresh_token_expiration'];
+                $now = time();
 
                 $payload = array(
                     'user_id' => $user_data->user_id,
@@ -116,7 +117,7 @@ class Aho_auth_model extends CI_Model {
                     'refresh_token' => $r_token
                 );
 
-                $jwt = $this->jwt_generate($payload, $this->jwt['expiration']);
+                $jwt = $this->jwt_generate($payload, $now, $this->jwt['expiration']);
 
                 $login_data = array(
                     'user_id' => $user_data->user_id,
@@ -124,7 +125,7 @@ class Aho_auth_model extends CI_Model {
                     'user_agent' => $ua,
                     'platform' => $platform,
                     'ip_address' => $ip_address,
-                    'expires_in' => date('Y-m-d H:i:s', time()+$r_token_exp)
+                    'expires_in' => date('Y-m-d H:i:s', $now+$r_token_exp)
                 );
 
                 // Insert login data to database
@@ -162,14 +163,13 @@ class Aho_auth_model extends CI_Model {
         }
     }
 
-    public function jwt_generate($data, $expire = 7200)
+    public function jwt_generate($data, $iat, $expire = 7200)
     {
-        $now = time();
         $iss = config_item('base_url');
         $aud = $this->input->server('HTTP_REMOTE_ADDR');
-        $iat = $now;
-        $nbf = $now + 5;
-        $exp = $expire + $now;
+        $iat = $iat;
+        $nbf = $iat + 5;
+        $exp = $expire + $iat;
         $claims = array(
             "iss" => $iss,
             "aud" => $aud,
@@ -194,6 +194,7 @@ class Aho_auth_model extends CI_Model {
     public function login_refresh($refresh_token, $user_id)
     {
         $data = $this->login_data($refresh_token, $user_id)->row();
+        $now = time();
         if (empty($data))
         {
             $this->message->set_message('account_error_token_invalid');
@@ -203,14 +204,15 @@ class Aho_auth_model extends CI_Model {
         $match = hash_equals($data->refresh_token, $refresh_token);
         if ($match)
         {
-            if ($this->jwt['expiration'] > (time() - strtotime($data->login_at)))
+            // Prevent generating new token if the old token is not expired yet
+            if ($this->jwt['expiration'] > ($now - strtotime($data->login_at)))
             {
                 $this->message->set_message('You just refreshed your token');
                 return FALSE;
             }
 
             $exp = strtotime($data->expires_in);
-            if ($exp < time() || intval($data->revoked) === 1)
+            if ($exp < $now || intval($data->revoked) === 1)
             {
                 $this->login_revoke($token, $user_id);
                 $this->message->set_message('account_error_token_expired');
@@ -225,7 +227,7 @@ class Aho_auth_model extends CI_Model {
                               ->result();
             $payload = array('refresh_token' => $new_token);
             $payload = array_merge($payload, $user_data[0]);
-            $jwt = $this->jwt_generate($payload, $this->jwt['expiration']);
+            $jwt = $this->jwt_generate($payload, $now, $this->jwt['expiration']);
 
             // Update refresh token on database
             $update = $this->db

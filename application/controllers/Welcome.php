@@ -22,8 +22,8 @@ class Welcome extends CI_Controller {
 	 */
 	public function index()
 	{
-        $this->load->model('Aho_group_model', 'aho_group');
-		var_dump(date('Y-m-d H:i:s', time()));
+        $n = 2;
+		var_dump(($n > 0) && ($n <= 1000));
 	}
 
 	public function test_get()
