@@ -19,7 +19,7 @@ This project is still in alpha phase.
 
 Using composer:
 ```
-composer require dwzzzl/aho-auth
+composer create-project dwzzzl/aho-auth api-auth
 ```
 
 Dang, i don't have access to SSH.
@@ -35,13 +35,13 @@ If you're **Aho** enough, you can contribute to this project by sending a Pull R
 ## TODO Lists
 - [x] ~~アホ~~
 - [x] Authentication
-- [ ] User Access Control
+- [x] User Access Control
 - [ ] Documentation
 - [ ] Email Verification
-- [ ] Google ReCAPTCHA integration
-- [ ] Sigle sign-on
+- [ ] Google reCAPTCHA integration
+- [ ] Single sign-on
 - [ ] Social Login
 - [ ] Multi-factor Authentication 
 
 ## License
-MIT
+[MIT](https://github.com/dwzzzl/aho-auth/blob/master/LICENSE.md)
