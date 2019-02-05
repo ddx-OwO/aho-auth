@@ -134,8 +134,6 @@ class Aho_auth_model extends CI_Model {
                                  ->safe_insert($this->tables['logins']);
 
                 $this->clear_login_attempts($user_data->user_id);
-                // $this->set_login_cookie($user_data->user_id, $jwt, $exp);
-                // $this->set_session($user_data);
 
                 $this->message->set_message('account_login_success');
                 return array(
@@ -251,6 +249,7 @@ class Aho_auth_model extends CI_Model {
     /**
      * Set token revoked flag
      * @param string $token
+     * @param int $user_id
      * @return string
      */
     public function login_revoke($token = NULL, $user_id = NULL)
@@ -328,9 +327,10 @@ class Aho_auth_model extends CI_Model {
     {
         if ($this->config->item('track_login_attempts', 'aho_config'))
         {
-            $diff = time() - $this->config->item('lockout_time', 'aho_config');
+            $time = time() - $this->config->item('lockout_time', 'aho_config');
+            $diff = date('Y-m-d H:i:s', $time);
             $this->db->where('user_id', $user_id);
-            $this->db->where('time >', $diff, FALSE);
+            $this->db->where('created_at >', $diff);
 
             $query = $this->db->get($this->tables['login_attempts']);
 
@@ -359,8 +359,7 @@ class Aho_auth_model extends CI_Model {
                     'user_id' => $user_id,
                     'ip_address' => $ip_address,
                     'user_agent' => $ua,
-                    'platform' => $platform,
-                    'time' => time()
+                    'platform' => $platform
                 )
             );
             return $this->db->insert($this->tables['login_attempts']);
@@ -379,9 +378,9 @@ class Aho_auth_model extends CI_Model {
     {
         if ($this->config->item('track_login_attempts', 'aho_config'))
         {
-            $diff = time() - $this->config->item('lockout_time', 'aho_config');
+            // $diff = date('Y-m-d H:i:s', time() - $this->config->item('lockout_time', 'aho_config'));
             $this->db->where('user_id', $user_id);
-            $this->db->where('time >', $diff, FALSE);
+            // $this->db->where('created_at >', $diff, FALSE);
 
             return $this->db->delete($this->tables['login_attempts']);
         }
