@@ -5,6 +5,7 @@
 /application/logs/
 /application/cache/
 /assets/
+/vendor/
 *.tmp
 *.log
 *.sublime-project
