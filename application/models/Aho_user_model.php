@@ -480,7 +480,8 @@ class Aho_user_model extends CI_Model {
         // Check if activation method is using email and user default status is 0 (Nonactive)
         // Email activation only works when user default status is 0 (Nonactive)
         $activation_method = $this->config->item('activation_method', 'aho_config');
-        $email_template = 
+        $email_template = $this->config->item('email_templates', 'aho_config');
+        $email_activate = $this->config->item('email_activate', 'aho_config');
         if ($activation_method === 'email')
         {
             $email_message_data = array(
@@ -488,8 +489,7 @@ class Aho_user_model extends CI_Model {
                 'activation_code' => $code
             );
             $email_message = $this->load->view(
-                $this->config->item('email_templates', 'aho_config').
-                $this->config->item('email_activate', 'aho_config'), 
+                $email_templates.$email_activate, 
                 $data, 
                 TRUE
             );

@@ -103,7 +103,7 @@ class Users extends MY_Controller {
             'gender' => $this->post('gender', TRUE),
             'phone' => $this->post('phone', TRUE),
             'birthday' => $this->post('birthday', TRUE)
-        )
+        );
         $_response = '';
 
         $validations = array(
