@@ -91,11 +91,19 @@ class Users extends MY_Controller {
     public function index_post()
     {
         $this->load->library('form_validation');
-        $identity = $this->post('username', TRUE);
+        $identity = $this->post($this->identity_column, TRUE);
         $password = $this->post('password');
         $email = $this->post('email');
-        $extra_data = $this->post('extra_data');
+        // $extra_data = $this->post('extra_data');
         $groups = $this->post('groups');
+        $extra_data = array(
+            'fullname' => $this->post('fullname', TRUE),
+            'identity_number' => $this->post('identity_number', TRUE),
+            'address' => $this->post('identity_number', TRUE),
+            'gender' => $this->post('gender', TRUE),
+            'phone' => $this->post('phone', TRUE),
+            'birthday' => $this->post('birthday', TRUE)
+        )
         $_response = '';
 
         $validations = array(
