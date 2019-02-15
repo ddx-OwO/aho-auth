@@ -222,9 +222,13 @@ class Aho_auth_model extends CI_Model {
             $this->db->select('user_id,username,email,'.$this->identity_column);
             $user_data = $this->aho_user
                               ->user_id($user_id)
-                              ->result();
-            $payload = array('refresh_token' => $new_token);
-            $payload = array_merge($payload, $user_data[0]);
+                              ->row();
+            $payload = array(
+                'refresh_token' => $new_token,
+                'user_id' => $user_data->user_id,
+                $this->identity_column => $user_data->{$this->identity_column},
+                'email' => $user_data->email,
+            );
             $jwt = $this->jwt_generate($payload, $now, $this->jwt['expiration']);
 
             // Update refresh token on database

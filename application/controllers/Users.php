@@ -85,11 +85,12 @@ class Users extends MY_Controller {
             $_response = prep_response($data, REST_Controller::HTTP_OK, $extra);
         }
 
-        $this->set_response($this->_jwt_content, $_response['code']);
+        $this->set_response($_response, $_response['code']);
     }
 
     public function index_post()
     {
+        $this->load->library('form_validation');
         $identity = $this->post('username', TRUE);
         $password = $this->post('password');
         $email = $this->post('email');
@@ -142,7 +143,7 @@ class Users extends MY_Controller {
         {
             $_response = prep_response([
                 'type' => 'bad_request',
-                'message' => $this->form_validation->error_string(NULL, NULL)
+                'message' => $this->form_validation->error_array(NULL, NULL)
             ], REST_Controller::HTTP_BAD_REQUEST, TRUE);
         }
 

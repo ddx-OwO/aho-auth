@@ -90,6 +90,22 @@ class MY_Controller extends REST_Controller {
         return NULL;
     }
 
+    protected function page()
+    {
+        $page = parent::get('page', TRUE);
+        if ( ! preg_match('/^[0-9]+$/i', $page))
+        {
+            return 0;
+        }
+
+        $offset = ($page - 1) * self::DEFAULT_LIMIT;
+        if (isset($page) && $page > 0)
+        {
+            $this->db->limit(self::DEFAULT_LIMIT);
+            $this->db->offset($offset);
+        }
+    }
+
     /**
      * @return void
      */

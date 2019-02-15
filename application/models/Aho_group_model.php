@@ -103,7 +103,8 @@ class Aho_group_model extends CI_Model {
 
     public function add_to_group($user_id, $group_id)
     {
-        $this->db->set([
+        $this->db->set(
+            [
                 'user_id' => $user_id,
                 'group_id' => $group_id
             ]
