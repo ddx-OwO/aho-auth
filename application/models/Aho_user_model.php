@@ -412,7 +412,7 @@ class Aho_user_model extends CI_Model {
     public function register($identity, $password, $email, $extra = NULL, $groups = NULL)
     {
         // Generate activation code hash
-        $this->activation_code = hash('sha256', $this->security->get_random_bytes(128));
+        $this->activation_code = hash('sha256', random_bytes(64));
 
         $default_status = ($this->config->item('activation_method', 'aho_config') === FALSE) ? 1 : 0;
 
@@ -464,38 +464,7 @@ class Aho_user_model extends CI_Model {
                 unset($group, $default_group);
             }
 
-            // Check if activation method is using email and user default status is 0 (Nonactive)
-            // Email activation only works when user default status is 0 (Nonactive)
-            $activation_method = $this->config->item('activation_method', 'aho_config');
-            
-            if ($activation_method === 'email')
-            {
-                $email_message_data = array(
-                    'identity' => $identity,
-                    'activation_code' => $this->activation_code
-                );
-                $email_message = $this->load->view($this->config->item('email_templates', 'aho_config').$this->config->item('email_activate', 'aho_config'), $data, TRUE);
-
-                $this->email->clear();
-
-                $this->email->from($this->config->item('admin_email', 'aho_config'), $this->config->item('email_subject', 'aho_config'));
-                $this->email->to($email);
-                $this->email->subject($this->config->item('email_subject', 'aho_config') . ' - ' . $this->lang->line('email_activation_subject'));
-                $this->email->message($email_message);
-
-                if ($this->email->send() === TRUE)
-                {
-                    $this->message->set_message('account_email_activation_success');
-                    return $id;
-                }
-                else
-                {
-                    $this->message->set_message('account_create_success');
-                    $this->message->set_message('account_activation_email_failed');
-                    return FALSE;
-                }
-            }
-
+            $this->send_activation_email($identity, $this->activation_code);
             $this->message->set_message('account_create_success');
             return $id;
         }
@@ -503,6 +472,46 @@ class Aho_user_model extends CI_Model {
         {
             $this->message->set_message('account_create_failed');
             return FALSE;
+        }
+    }
+
+    public function send_activation_email($identity, $code)
+    {
+        // Check if activation method is using email and user default status is 0 (Nonactive)
+        // Email activation only works when user default status is 0 (Nonactive)
+        $activation_method = $this->config->item('activation_method', 'aho_config');
+        $email_template = 
+        if ($activation_method === 'email')
+        {
+            $email_message_data = array(
+                'identity' => $identity,
+                'activation_code' => $code
+            );
+            $email_message = $this->load->view(
+                $this->config->item('email_templates', 'aho_config').
+                $this->config->item('email_activate', 'aho_config'), 
+                $data, 
+                TRUE
+            );
+
+            $this->email->clear();
+
+            $this->email->from($this->config->item('admin_email', 'aho_config'), $this->config->item('email_subject', 'aho_config'));
+            $this->email->to($email);
+            $this->email->subject($this->config->item('email_subject', 'aho_config') . ' - ' . $this->lang->line('email_activation_subject'));
+            $this->email->message($email_message);
+
+            if ($this->email->send() === TRUE)
+            {
+                $this->message->set_message('account_email_activation_success');
+                return $id;
+            }
+            else
+            {
+                $this->message->set_message('account_create_success');
+                $this->message->set_message('account_activation_email_failed');
+                return FALSE;
+            }
         }
     }
 
